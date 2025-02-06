@@ -1,14 +1,21 @@
-# HES System
+# Higher Education System (HES)
 
-Higher Education System (HES) - A comprehensive platform for managing educational institutions.
+A comprehensive system for managing higher education institutions, built with:
 
-## Project Structure
+## Technologies
+- Backend: FastAPI with SQLite and SQLAlchemy
+- Frontend: Vue 3 with TypeScript
+- Authentication: JWT with multi-role support
+- UI: Element Plus and Tailwind CSS
+- Internationalization: Vue I18n (English/Chinese)
+- Performance Monitoring: Browser Performance API
 
-- `/frontend` - React-based web interface
-- `/backend` - FastAPI-based REST API
+## Features
+- User Authentication
+- Role-based Access Control
+- Internationalization Support
+- Performance Monitoring
+- Rate Limiting Protection
 
 ## Development
-
-This project uses:
-- Frontend: React with TypeScript, Tailwind CSS, and shadcn/ui
-- Backend: FastAPI with SQLite in-memory database
+See individual README files in frontend and backend directories for setup instructions.
