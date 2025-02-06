@@ -1,0 +1,22 @@
+{
+  "login": {
+    "title": "Sign in to your account",
+    "accountId": "Account ID",
+    "accountIdPlaceholder": "Enter your account ID (6-25 characters)",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "verificationCode": "Verification Code",
+    "verificationCodePlaceholder": "Enter the result",
+    "rememberMe": "Remember me",
+    "language": "Language",
+    "submit": "Sign in",
+    "loggingIn": "Signing in...",
+    "error": {
+      "generic": "Invalid credentials",
+      "network": "Network error. Please try again.",
+      "verification": "Invalid verification code",
+      "locked": "Account locked. Please try again later.",
+      "tooManyAttempts": "Too many failed attempts. Please try again later."
+    }
+  }
+}
