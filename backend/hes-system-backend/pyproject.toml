@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "app"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras = ["standard"], version = "^0.115.8"}
+psycopg = {extras = ["binary"], version = "^3.2.4"}
+sqlalchemy = "^2.0.37"
+pydantic-settings = "^2.7.1"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-multipart = "^0.0.20"
+alembic = "^1.14.1"
+email-validator = "^2.2.0"
+bcrypt = "^4.2.1"
+fastapi-middleware = "^0.2.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
