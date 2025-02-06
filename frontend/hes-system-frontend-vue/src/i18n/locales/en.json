@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "Sign in to HES System",
+    "accountId": "Account ID",
+    "accountIdPlaceholder": "Enter your account ID (6-25 characters)",
+    "password": "Password",
+    "verificationCode": "Verification Code",
+    "rememberMe": "Remember me",
+    "submit": "Sign in",
+    "loggingIn": "Signing in...",
+    "error": {
+      "generic": "Invalid credentials",
+      "network": "Network error. Please try again.",
+      "accountId": "Account ID must be 6-25 characters (letters and underscores only)",
+      "password": "Password must be 6-25 characters",
+      "verification": "Invalid verification code",
+      "tooManyAttempts": "Too many attempts. Please try again later."
+    }
+  }
+}
