@@ -12,10 +12,14 @@
     "error": {
       "generic": "Invalid credentials",
       "network": "Network error. Please try again.",
-      "accountId": "Account ID must be 6-25 characters (letters and underscores only)",
+      "accountId": "Account ID must be 6-25 characters (letters, numbers and underscores only)",
       "password": "Password must be 6-25 characters",
       "verification": "Invalid verification code",
-      "tooManyAttempts": "Too many attempts. Please try again later."
+      "tooManyAttempts": "Too many attempts. Please try again later.",
+      "invalidCredentials": "Invalid username or password",
+      "verificationExpired": "Verification code has expired",
+      "tooManyVerificationRequests": "Too many verification code requests. Please wait a moment.",
+      "verificationMissing": "Please enter verification code"
     }
   }
 }

@@ -1,22 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Login from '@/components/auth/Login.vue'
+import Login from '../components/auth/Login.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/login',
+      path: '/',
       name: 'login',
       component: Login,
       meta: { requiresAuth: false }
     },
     {
-      path: '/',
-      redirect: '/login'
+      path: '/test',
+      name: 'test',
+      component: () => import('@/components/auth/VerificationTest.vue'),
+      meta: { requiresAuth: false }
     },
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/login'
+      redirect: '/'
     }
   ]
 })

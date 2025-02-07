@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePerformanceMonitoring } from '@/composables/usePerformanceMonitoring'
-import apiClient from '@/api/client'
+import apiClient, { BASE_URL } from '@/api/client'
 import { ElMessage } from 'element-plus'
+import { Loading, Warning } from '@element-plus/icons-vue'
 import WavePattern from '@/components/ui/WavePattern.vue'
 import bgImage from '@/assets/images/bg_b.gif'
 import 'element-plus/es/components/message/style/css'
@@ -14,27 +15,42 @@ const { measureApiResponse } = usePerformanceMonitoring()
 const accountId = ref('')
 const password = ref('')
 const verificationCode = ref('')
-const verificationCodeUrl = ref('http://47.240.10.58:20001/login/getCodeImg')
+const verificationCodeUrl = ref('')
+const verificationImageLoading = ref(true)
+const verificationImageError = ref(false)
+const verificationImageRetries = ref(0)
 const rememberMe = ref(false)
 const loading = ref(false)
+const isRateLimited = ref(false)
+const rateLimitTimer = ref<number | null>(null)
 
 const accountIdError = ref('')
 const passwordError = ref('')
 const verificationError = ref('')
+
+const MAX_RETRIES = 3
+const RETRY_DELAY = 2000
+const RATE_LIMIT_DELAY = 5000
 
 const validateAccountId = (value: string) => {
   if (!value) {
     accountIdError.value = t('login.error.accountId')
     return false
   }
-  const isValid = /^[A-Za-z_]{6,25}$/.test(value)
-  accountIdError.value = isValid ? '' : t('login.error.accountId')
+  const isValid = /^[A-Za-z0-9_]{6,25}$/.test(value)
+  if (!isValid) {
+    accountIdError.value = t('login.error.accountId')
+    ElMessage.error(t('login.error.accountId'))
+  } else {
+    accountIdError.value = ''
+  }
   return isValid
 }
 
 const validatePassword = (value: string) => {
   if (!value || value.length < 6 || value.length > 25) {
     passwordError.value = t('login.error.password')
+    ElMessage.error(t('login.error.password'))
     return false
   }
   passwordError.value = ''
@@ -43,7 +59,8 @@ const validatePassword = (value: string) => {
 
 const validateVerificationCode = (value: string) => {
   if (!value) {
-    verificationError.value = t('login.error.verification')
+    verificationError.value = t('login.error.verificationMissing')
+    ElMessage.error(t('login.error.verificationMissing'))
     return false
   }
   verificationError.value = ''
@@ -51,72 +68,112 @@ const validateVerificationCode = (value: string) => {
 }
 
 const fetchVerificationCode = async () => {
-  try {
-    const { response } = await measureApiResponse('/login/getCodeImg', {
-      method: 'GET'
-    })
-    const { data } = response
-    console.log('Verification code response:', data)
-    if (data.code === 200 && data.img) {
-      verificationCodeUrl.value = `data:image/png;base64,${data.img}`
-      localStorage.setItem('uniqueNumber', data.uuid || '')
-      console.log('Verification code fetched successfully')
-    } else {
-      console.error('Failed to fetch verification code:', data)
-      ElMessage.error(t('login.error.verification'))
-    }
-  } catch (err) {
-    ElMessage.error(t('login.error.network'))
-  }
-  verificationCode.value = ''
-  verificationError.value = ''
-}
-
-const handleSubmit = async () => {
-  const isAccountIdValid = validateAccountId(accountId.value)
-  const isPasswordValid = validatePassword(password.value)
-  const isVerificationValid = validateVerificationCode(verificationCode.value)
-
-  if (!isAccountIdValid || !isPasswordValid || !isVerificationValid) {
+  if (verificationImageRetries.value >= MAX_RETRIES) {
+    console.error('Max retries reached for verification code')
+    ElMessage.error(t('login.error.tooManyAttempts'))
     return
   }
 
+  verificationImageLoading.value = true
+  verificationImageError.value = false
+  verificationCode.value = ''
+  verificationError.value = ''
+  
+  try {
+    const response = await fetch(`${BASE_URL}/login/getCodeImg`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    if (data.success === 1 && data.data) {
+      verificationCodeUrl.value = `data:image/png;base64,${data.data.verifyImg}`
+      localStorage.setItem('uniqueNumber', data.data.uniqueNumber)
+      verificationImageLoading.value = false
+      verificationImageError.value = false
+      verificationImageRetries.value = 0
+    } else {
+      throw new Error('Invalid verification code response')
+    }
+  } catch (error) {
+    console.error('Failed to fetch verification code:', error)
+    verificationImageError.value = true
+    verificationImageLoading.value = false
+    verificationCodeUrl.value = ''
+
+    if (error.response?.status === 429) {
+      isRateLimited.value = true
+      ElMessage.warning(t('login.error.tooManyVerificationRequests'))
+      
+      if (rateLimitTimer.value) {
+        clearTimeout(rateLimitTimer.value)
+      }
+      
+      rateLimitTimer.value = window.setTimeout(() => {
+        isRateLimited.value = false
+        rateLimitTimer.value = null
+        verificationImageRetries.value = 0
+        fetchVerificationCode()
+      }, RATE_LIMIT_DELAY)
+    } else {
+      verificationImageRetries.value++
+      if (verificationImageRetries.value < MAX_RETRIES) {
+        setTimeout(() => fetchVerificationCode(), RETRY_DELAY)
+      } else {
+        ElMessage.error(t('login.error.verification'))
+      }
+    }
+  }
+}
+
+const handleSubmit = async () => {
   loading.value = true
 
   try {
-    console.log('Submitting login form with:', {
-      username: accountId.value,
-      verifyCode: verificationCode.value,
-      uniqueNumber: localStorage.getItem('uniqueNumber')
-    })
-    
-    const uniqueNumber = localStorage.getItem('uniqueNumber')
-    console.log('Attempting login with:', {
-      username: accountId.value,
-      verifyCode: verificationCode.value,
-      uniqueNumber,
-      rememberMe: rememberMe.value
-    })
-    
-    const { response } = await measureApiResponse('/login/doLogin', {
-      method: 'POST',
-      data: {
-        username: accountId.value,
-        password: password.value,
-        verifyCode: verificationCode.value,
-        rememberMe: rememberMe.value.toString(),
-        uniqueNumber: uniqueNumber || ''
-      }
-    })
-    
-    console.log('Login response:', response.data)
+    const isAccountIdValid = validateAccountId(accountId.value)
+    const isPasswordValid = validatePassword(password.value)
+    const isVerificationValid = validateVerificationCode(verificationCode.value)
 
-    const { data } = response
-    if (data.code === 200) {
-      localStorage.setItem('token', data.data.token)
-      localStorage.setItem('user', JSON.stringify(data.data))
-      localStorage.setItem('preferredLanguage', 'en')
-      
+    if (!isAccountIdValid || !isPasswordValid || !isVerificationValid) {
+      loading.value = false
+      return
+    }
+
+    const uniqueNumber = localStorage.getItem('uniqueNumber')
+    if (!uniqueNumber) {
+      ElMessage.error(t('login.error.verification'))
+      await fetchVerificationCode()
+      loading.value = false
+      return
+    }
+
+    const formData = new URLSearchParams()
+    formData.append('username', accountId.value)
+    formData.append('password', password.value)
+    formData.append('verifyCode', verificationCode.value)
+    formData.append('rememberMe', rememberMe.value ? '1' : '0')
+    formData.append('uniqueNumber', uniqueNumber)
+    
+    console.log('Sending login request with data:', Object.fromEntries(formData))
+    
+    console.log('Sending login request with data:', Object.fromEntries(formData))
+    
+    const data = await makeLoginRequest({
+      username: accountId.value,
+      password: password.value,
+      verifyCode: verificationCode.value,
+      uniqueNumber: uniqueNumber,
+      rememberMe: rememberMe.value ? '1' : '0'
+    })
+    
+    if (data.success === 1) {
       if (rememberMe.value) {
         localStorage.setItem('accountId', accountId.value)
         localStorage.setItem('rememberMe', 'true')
@@ -124,24 +181,36 @@ const handleSubmit = async () => {
         localStorage.removeItem('accountId')
         localStorage.removeItem('rememberMe')
       }
-      
+
+      localStorage.setItem('token', data.data.token)
+      localStorage.setItem('user', JSON.stringify(data.data))
       window.location.href = '/dashboard'
     } else {
-      ElMessage.error(data.msg || t('login.error.generic'))
-      fetchVerificationCode()
+      console.error('Login failed:', data)
+      if (data.errorMessage?.includes('Content type')) {
+        ElMessage.error('API Error: ' + data.errorMessage)
+      } else if (data.errorMessage === 'YTL_ERROR_VERIFY_CODE') {
+        ElMessage.error(t('login.error.verification'))
+      } else if (data.errorMessage === 'YTL_ERROR_PARAM') {
+        ElMessage.error(t('login.error.invalidCredentials'))
+      } else {
+        ElMessage.error(t('login.error.generic'))
+      }
+      await fetchVerificationCode()
     }
-  } catch (err: any) {
-    if (err.response?.status === 429) {
+  } catch (error) {
+    console.error('Login error:', error)
+    if (error.response?.status === 429) {
       ElMessage.error(t('login.error.tooManyAttempts'))
-    } else if (err.response?.status === 401) {
-      ElMessage.error(t('login.error.generic'))
     } else {
       ElMessage.error(t('login.error.network'))
     }
-    fetchVerificationCode()
+    await fetchVerificationCode()
   } finally {
     loading.value = false
   }
+
+
 }
 
 onMounted(() => {
@@ -151,6 +220,26 @@ onMounted(() => {
   if (savedAccountId && rememberedMe === 'true') {
     accountId.value = savedAccountId
     rememberMe.value = true
+  }
+})
+
+onBeforeUnmount(() => {
+  // Clean up any pending timers
+  if (rateLimitTimer.value) {
+    clearTimeout(rateLimitTimer.value)
+    rateLimitTimer.value = null
+  }
+  
+  // Reset state
+  isRateLimited.value = false
+  verificationImageRetries.value = 0
+  verificationImageLoading.value = false
+  verificationImageError.value = false
+  
+  // Clean up any blob URLs
+  if (verificationCodeUrl.value && verificationCodeUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(verificationCodeUrl.value)
+    verificationCodeUrl.value = ''
   }
 })
 </script>
@@ -250,8 +339,31 @@ onMounted(() => {
                     @blur="validateVerificationCode(verificationCode)"
                   />
                 </div>
-                <div class="flex items-center justify-center px-4 border border-l-0 border-form-border rounded-r-button bg-gray-50 min-w-[100px] h-[42px] cursor-pointer" @click="fetchVerificationCode">
-                  <img :src="verificationCodeUrl" alt="Verification Code" class="h-full object-contain" />
+                <div 
+                  class="flex items-center justify-center px-4 border border-l-0 border-form-border rounded-r-button bg-gray-50 min-w-[100px] h-[42px] relative" 
+                  :class="{ 'cursor-pointer': !isRateLimited && !verificationImageLoading, 'cursor-not-allowed': isRateLimited || verificationImageLoading }"
+                  @click="!isRateLimited && !verificationImageLoading && fetchVerificationCode()"
+                  role="button"
+                  tabindex="0"
+                  @keydown.enter="!isRateLimited && !verificationImageLoading && fetchVerificationCode()"
+                  @keydown.space="!isRateLimited && !verificationImageLoading && fetchVerificationCode()"
+                >
+                  <div v-if="verificationImageLoading || isRateLimited" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50">
+                    <el-icon class="animate-spin mb-1"><Loading /></el-icon>
+                    <span v-if="isRateLimited" class="text-xs text-gray-500 text-center px-2">
+                      {{ t('login.error.tooManyVerificationRequests') }}
+                    </span>
+                  </div>
+                  <div v-else-if="verificationImageError" class="absolute inset-0 flex items-center justify-center bg-gray-50 text-red-500">
+                    <el-icon><Warning /></el-icon>
+                    <span class="ml-1 text-xs">{{ t('login.error.verification') }}</span>
+                  </div>
+                  <img 
+                    v-show="!verificationImageLoading && !verificationImageError && !isRateLimited && verificationCodeUrl"
+                    :src="verificationCodeUrl" 
+                    alt="Verification Code" 
+                    class="h-full object-contain"
+                  />
                 </div>
               </div>
               <p v-if="verificationError" class="mt-1 text-sm text-red-600">{{ verificationError }}</p>
