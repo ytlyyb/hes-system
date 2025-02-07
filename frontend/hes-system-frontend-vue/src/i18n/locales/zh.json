@@ -1,6 +1,7 @@
 {
   "login": {
     "title": "登录HES系统",
+    "accountLogin": "账号密码登录",
     "accountId": "账号",
     "accountIdPlaceholder": "请输入账号（6-25个字符）",
     "password": "密码",

@@ -1,3 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .login-card {
+    @apply max-w-card w-full mx-4 bg-white rounded-card shadow-xl flex overflow-hidden;
+  }
+  
+  .login-form {
+    @apply w-full lg:w-1/2 p-8;
+  }
+  
+  .login-illustration {
+    @apply w-1/2 bg-form-background p-8 hidden lg:block;
+  }
+  
+  .form-input {
+    @apply block w-full pl-10 pr-3 py-2 text-input border rounded-button placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-primary-light;
+  }
+  
+  .form-input-error {
+    @apply border-red-500;
+  }
+  
+  .form-input-valid {
+    @apply border-form-border;
+  }
+  
+  .verification-input {
+    @apply block w-full pr-3 py-2 text-input border rounded-l-button placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-primary-light;
+  }
+  
+  .verification-display {
+    @apply flex items-center justify-center px-4 border border-l-0 border-form-border rounded-r-button bg-gray-50 min-w-[100px];
+  }
+  
+  .submit-button {
+    @apply w-full flex justify-center py-3 px-4 text-button font-semibold rounded-button text-white bg-primary-light hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light disabled:opacity-50 transition-colors duration-200;
+  }
+}

@@ -1,6 +1,7 @@
 {
   "login": {
     "title": "Sign in to HES System",
+    "accountLogin": "Account Password Login",
     "accountId": "Account ID",
     "accountIdPlaceholder": "Enter your account ID (6-25 characters)",
     "password": "Password",
