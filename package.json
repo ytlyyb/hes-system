@@ -1,0 +1,14 @@
+{
+  "name": "hes-system",
+  "version": "1.0.0",
+  "description": "Higher Education System (HES) - A comprehensive platform for managing educational institutions.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {}
+}
